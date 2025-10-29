@@ -4,14 +4,29 @@ from __future__ import annotations
 import logging
 import math
 import queue
+import sys
 import time
 from array import array
 from contextlib import AbstractContextManager
 from typing import Callable, Optional
 
+try:  # pragma: no cover - optional dependency for packaging environments
+    import sounddevice as sd
+except ModuleNotFoundError:  # pragma: no cover - fallback when sounddevice is unavailable
+    sd = None  # type: ignore[assignment]
+
 from .types import AudioChunk
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _get_sounddevice():
+    if sd is not None:
+        return sd
+    module = sys.modules.get("sounddevice")
+    if module is not None:
+        return module
+    return None
 
 
 def _compute_rms(chunk: bytes, sample_width: int) -> int:
@@ -104,18 +119,17 @@ class MicrophoneStream(AbstractContextManager):
     def _build_sounddevice_stream(
         self, sample_rate: int, channels: int, blocksize: int, callback: Callable[[bytes], None]
     ) -> object:
-        try:
-            import sounddevice as sd
-        except ImportError:  # pragma: no cover - executed when dependency missing
+        backend = _get_sounddevice()
+        if backend is None:  # pragma: no cover - executed when dependency missing
             LOGGER.info("sounddevice not installed; microphone capture disabled")
-            raise
+            raise ImportError("sounddevice not installed")
 
         def _callback(indata, frames, time_info, status):  # noqa: ARG001
             if status:  # pragma: no cover - status logging
                 LOGGER.debug("Microphone status: %s", status)
             callback(bytes(indata))
 
-        stream = sd.RawInputStream(
+        stream = backend.RawInputStream(
             samplerate=sample_rate,
             channels=channels,
             dtype="int16",
