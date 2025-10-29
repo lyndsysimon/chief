@@ -1,4 +1,4 @@
-name: Python tests
+name: Dockerized Python tests
 
 on:
   pull_request:
@@ -14,16 +14,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
+      - name: Build test image
+        run: docker build -t chief-ci .
+      - name: Run tests with coverage in Docker
         run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-cov
-      - name: Run tests with coverage
-        run: pytest --cov=ChatAssistant --cov-report=xml
+          set -euo pipefail
+          docker run --name chief-ci-tests chief-ci pytest --cov=ChatAssistant --cov-report=xml
+          docker cp chief-ci-tests:/app/coverage.xml coverage.xml
+          docker rm chief-ci-tests
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
