@@ -17,6 +17,48 @@ This repository is structured to make it easy to replace the stubbed components
 with real Windows integrations (Porcupine, faster-whisper, ElevenLabs, pywin32,
 DirectSound, etc.).
 
+## Containerized workflows
+
+This repository ships with a Docker image that captures the dependencies needed
+for both local development and CI test runs.
+
+### Build the image
+
+```bash
+docker build -t chief:ci .
+```
+
+The resulting image installs the project in a virtual environment and sets the
+default command to run the unit test suite via `pytest`.
+
+### Run tests in Docker
+
+```bash
+docker run --rm chief:ci
+```
+
+You can pass additional `pytest` flags by appending them to the command. For
+example, run the suite verbosely with `docker run --rm chief:ci -vv`.
+
+### Interactive development with Docker Compose
+
+The provided `docker-compose.yml` file builds the same image and mounts the
+repository into the container for iterative development.
+
+```bash
+# Start the container in the background
+docker compose up -d
+
+# Run commands against the containerized environment
+docker compose exec chief pytest
+
+# Stop the development container when finished
+docker compose down
+```
+
+Alternatively, you can run one-off commands with
+`docker compose run --rm chief <command>`.
+
 ## Implementation plan to reach a locally testable build
 
 The table below tracks the end-to-end work required to replace the stubs with
