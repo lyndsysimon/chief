@@ -22,13 +22,15 @@ ChatAssistant/
 
 The `example_flow()` function in `main.py` demonstrates a single end-to-end
 interaction without real audio input. It primes the state with telemetry and
-a reference dataset, runs the LLM stub, and prints the response.
+a reference dataset, runs the LLM stub, and prints the response. When no
+text-to-speech backend has been configured it synthesizes a simple tone
+sequence so you still hear a confirmation from the demo.
 
 ```bash
 python -m ChatAssistant.main
 ```
 
-Expected console output:
+Expected console output and audio:
 
 ```
 Combat: 450 km/h, Landing: 350 km/h, Takeoff: 320 km/h

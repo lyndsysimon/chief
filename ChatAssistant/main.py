@@ -8,6 +8,9 @@ assistant can be completed on a real Windows 11 workstation.
 from __future__ import annotations
 
 import logging
+import math
+import re
+import struct
 import threading
 from typing import Dict, List
 
@@ -15,7 +18,8 @@ from .audio import AudioConfigurationError, configure_elevenlabs_from_env
 from .audio.hotkey_listener import GlobalHotkeyListener
 from .audio.mic_capture import MicrophoneStream
 from .audio.stt import call_stt
-from .audio.tts import call_tts, play_audio
+from .audio.tts import TTS_BACKEND, call_tts, play_audio
+from .audio.types import AudioChunk
 from .audio.wake_word_listener import WakeWordListener
 from .brain.intent_classifier import IntentType, classify_intent
 from .brain.llm_client import call_llm
@@ -140,6 +144,55 @@ def example_flow() -> None:
 
     llm_reply = call_llm(messages)
     print(llm_reply)
+
+    audio_chunk = call_tts(llm_reply) if TTS_BACKEND is not None else AudioChunk(data=b"", sample_rate=16_000)
+    if not audio_chunk.data:
+        audio_chunk = _synthesize_reference_tone(llm_reply)
+    play_audio(audio_chunk)
+
+
+def _synthesize_reference_tone(response_text: str) -> AudioChunk:
+    """Generate a simple confirmation tone for the example flow."""
+
+    sample_rate = 16_000
+    amplitude = int(0.35 * (2 ** 15 - 1))
+    tone_duration = 0.35
+    spacer_duration = 0.1
+
+    label_frequency = {
+        "combat": 880.0,
+        "landing": 660.0,
+        "takeoff": 550.0,
+    }
+
+    matches = re.findall(r"(Combat|Landing|Takeoff):\s*([0-9]+)", response_text, re.IGNORECASE)
+    if not matches:
+        matches = [("status", "0")]
+
+    frames = bytearray()
+
+    def _append_silence(duration: float) -> None:
+        frame_count = int(duration * sample_rate)
+        frames.extend(b"\x00\x00" * frame_count)
+
+    def _append_tone(frequency: float, duration: float) -> None:
+        frame_count = int(duration * sample_rate)
+        two_pi_over_rate = 2.0 * math.pi * frequency / sample_rate
+        for n in range(frame_count):
+            sample = math.sin(two_pi_over_rate * n)
+            frames.extend(struct.pack("<h", int(sample * amplitude)))
+
+    for label, value in matches:
+        base_freq = label_frequency.get(label.lower(), 440.0)
+        _append_tone(base_freq, tone_duration)
+        _append_silence(spacer_duration)
+        for digit in value:
+            digit_freq = 440.0 + (int(digit) * 18.0)
+            _append_tone(digit_freq, tone_duration / 3)
+            _append_silence(spacer_duration / 2)
+        _append_silence(spacer_duration * 2)
+
+    return AudioChunk(data=bytes(frames), sample_rate=sample_rate)
 
 
 if __name__ == "__main__":
