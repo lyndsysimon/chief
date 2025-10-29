@@ -10,10 +10,18 @@ from ChatAssistant.audio.types import AudioChunk
 
 
 class DummyResponse:
-    def __init__(self, *, json_payload=None, content: bytes = b"", status_code: int = 200):
+    def __init__(
+        self,
+        *,
+        json_payload=None,
+        content: bytes = b"",
+        status_code: int = 200,
+        headers: dict[str, str] | None = None,
+    ):
         self._json_payload = json_payload
         self._content = content
         self.status_code = status_code
+        self.headers = headers or {}
 
     def json(self):
         return self._json_payload
@@ -50,7 +58,7 @@ class DummySession:
             payload = {"text": "transcribed"}
             return DummyResponse(json_payload=payload)
         if "text-to-speech" in url:
-            return DummyResponse(content=b"WAVE")
+            return DummyResponse(content=b"MP3", headers={"content-type": "audio/mpeg"})
         raise AssertionError("Unexpected URL: " + url)
 
 
@@ -90,18 +98,22 @@ def _build_wav(sample_rate=22_050, channels=1, sample_width=2, frames=b"\x01\x00
     return buffer.getvalue()
 
 
-def test_elevenlabs_tts_registration():
-    wav_bytes = _build_wav(frames=b"\x01\x00" * 5)
+def test_elevenlabs_tts_registration(monkeypatch):
+    expected = AudioChunk(data=b"decoded", sample_rate=22_050)
+    monkeypatch.setattr(
+        "ChatAssistant.audio.tts._audio_chunk_from_mp3",
+        lambda payload: expected,
+    )
     session = DummySession()
 
     def post(url, **kwargs):  # noqa: ANN001
         if "text-to-speech" in url:
             headers = kwargs["headers"]
             assert headers["xi-api-key"] == "token"
-            assert headers["Accept"] == "audio/wav"
+            assert headers["Accept"] == "audio/mpeg"
             payload = kwargs["json"]
             assert payload["text"] == "hello"
-            return DummyResponse(content=wav_bytes)
+            return DummyResponse(content=b"MP3", headers={"content-type": "audio/mpeg"})
         return DummyResponse()
 
     session.post = post  # type: ignore[assignment]
@@ -110,8 +122,7 @@ def test_elevenlabs_tts_registration():
 
     audio = call_tts("hello")
     assert isinstance(audio, AudioChunk)
-    assert audio.data != b""
-    assert audio.sample_rate == 22_050
+    assert audio is expected
 
 
 def test_play_audio_with_sounddevice(monkeypatch):

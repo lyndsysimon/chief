@@ -1,6 +1,7 @@
 """Text-to-speech abstraction layer with optional ElevenLabs integration."""
 from __future__ import annotations
 
+import io
 import logging
 import os
 from typing import Callable, Optional
@@ -19,6 +20,11 @@ except ModuleNotFoundError:  # pragma: no cover - fallback when requests is unav
 
     class Session:  # type: ignore[override]
         """Placeholder type used when requests is missing."""
+
+try:  # pragma: no cover - optional dependency for MP3 decoding
+    from pydub import AudioSegment
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    AudioSegment = None  # type: ignore[assignment]
 
 from .types import AudioChunk
 
@@ -79,6 +85,8 @@ def _coerce_chunk(audio: AudioChunk | bytes) -> AudioChunk:
     payload = bytes(audio)
     if payload.startswith(b"RIFF"):
         return AudioChunk.from_wav_bytes(payload)
+    if _looks_like_mp3(payload):
+        return _audio_chunk_from_mp3(payload)
     return AudioChunk(data=payload, sample_rate=16_000)
 
 
@@ -120,7 +128,7 @@ class ElevenLabsTextToSpeechClient:
         headers = {
             "xi-api-key": self.api_key,
             "Content-Type": "application/json",
-            "Accept": "audio/wav",
+            "Accept": "audio/mpeg",
         }
         response: Response | None = None
         try:
@@ -132,12 +140,19 @@ class ElevenLabsTextToSpeechClient:
             )
             response.raise_for_status()
             audio_bytes = response.content
+            content_type = (response.headers or {}).get("content-type", "")
         except HTTPError as exc:  # pragma: no cover - exercised via tests
             raise RuntimeError("ElevenLabs TTS request failed") from exc
         finally:
             _maybe_close(response)
 
-        return AudioChunk.from_wav_bytes(audio_bytes)
+        if content_type.startswith("audio/mpeg") or _looks_like_mp3(audio_bytes):
+            return _audio_chunk_from_mp3(audio_bytes)
+        if audio_bytes.startswith(b"RIFF"):
+            return AudioChunk.from_wav_bytes(audio_bytes)
+        raise RuntimeError(
+            "ElevenLabs TTS returned an unsupported audio format: " + (content_type or "unknown")
+        )
 
 
 def register_elevenlabs_tts(
@@ -186,3 +201,30 @@ def _create_session() -> Session:
             "The 'requests' package is required for ElevenLabs TTS integration. Install it via 'uv add requests'."
         )
     return requests.Session()
+
+
+def _audio_chunk_from_mp3(payload: bytes) -> AudioChunk:
+    if AudioSegment is None:
+        raise RuntimeError(
+            "Decoding MP3 responses requires the 'pydub' package. Install it via 'uv add pydub' and ensure ffmpeg is available."
+        )
+    try:
+        segment = AudioSegment.from_file(io.BytesIO(payload), format="mp3")
+    except Exception as exc:  # pragma: no cover - surfaces optional dependency issues
+        raise RuntimeError("Failed to decode MP3 audio payload") from exc
+    return AudioChunk(
+        data=segment.raw_data,
+        sample_rate=segment.frame_rate,
+        channels=segment.channels,
+        sample_width=segment.sample_width,
+    )
+
+
+def _looks_like_mp3(payload: bytes) -> bool:
+    if not payload:
+        return False
+    if payload.startswith(b"ID3"):
+        return True
+    if len(payload) < 2:
+        return False
+    return payload[0] == 0xFF and (payload[1] & 0xE0) == 0xE0
