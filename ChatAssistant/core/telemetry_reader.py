@@ -6,20 +6,8 @@ import time
 from dataclasses import dataclass
 from typing import Dict, Optional
 
-try:  # pragma: no cover - optional dependency for packaging environments
-    import requests
-    from requests import RequestException, Response, Session
-except ModuleNotFoundError:  # pragma: no cover - fallback when requests is unavailable
-    requests = None  # type: ignore[assignment]
-
-    class RequestException(Exception):  # type: ignore[override]
-        """Placeholder raised when requests is unavailable."""
-
-    class Response:  # type: ignore[override]
-        """Placeholder type used when requests is missing."""
-
-    class Session:  # type: ignore[override]
-        """Placeholder type used when requests is missing."""
+import requests
+from requests import RequestException, Response, Session
 
 from .state_manager import AssistantState
 
@@ -97,10 +85,6 @@ class TelemetryReader:
 
     def _ensure_session(self) -> Session:
         if self._session is None:
-            if requests is None:
-                raise RuntimeError(
-                    "The 'requests' package is required for telemetry polling. Install it via 'uv add requests'."
-                )
             self._session = requests.Session()
         return self._session
 

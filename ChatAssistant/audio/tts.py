@@ -1,24 +1,12 @@
-"""Text-to-speech abstraction layer with optional ElevenLabs integration."""
+"""Text-to-speech abstraction layer with ElevenLabs integration."""
 from __future__ import annotations
 
 import logging
 import os
 from typing import Callable, Optional
 
-try:  # pragma: no cover - optional dependency for packaging environments
-    import requests
-    from requests import HTTPError, Response, Session
-except ModuleNotFoundError:  # pragma: no cover - fallback when requests is unavailable
-    requests = None  # type: ignore[assignment]
-
-    class HTTPError(Exception):  # type: ignore[override]
-        """Placeholder raised when requests is unavailable."""
-
-    class Response:  # type: ignore[override]
-        """Placeholder type used when requests is missing."""
-
-    class Session:  # type: ignore[override]
-        """Placeholder type used when requests is missing."""
+import requests
+from requests import HTTPError, Response, Session
 
 from .types import AudioChunk
 
@@ -52,11 +40,7 @@ def play_audio(audio: AudioChunk | bytes) -> None:
         LOGGER.info("[AUDIO] %s", "Combat: 450 km/h, Landing: 350 km/h, Takeoff: 320 km/h")
         return
 
-    try:
-        import sounddevice as sd
-    except ImportError:  # pragma: no cover - depends on optional dependency
-        LOGGER.warning("sounddevice not installed; unable to play audio (%d bytes)", len(chunk.data))
-        return
+    import sounddevice as sd
 
     dtype = _dtype_from_width(chunk.sample_width)
     try:
@@ -181,8 +165,4 @@ def _maybe_close(response: Response | None) -> None:
 
 
 def _create_session() -> Session:
-    if requests is None:
-        raise RuntimeError(
-            "The 'requests' package is required for ElevenLabs TTS integration. Install it via 'uv add requests'."
-        )
     return requests.Session()
