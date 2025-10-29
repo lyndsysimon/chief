@@ -22,13 +22,17 @@ ChatAssistant/
 
 The `example_flow()` function in `main.py` demonstrates a single end-to-end
 interaction without real audio input. It primes the state with telemetry and
-a reference dataset, runs the LLM stub, and prints the response.
+a reference dataset, runs the LLM stub, and prints the response. If
+`ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` are present in the shell where
+you launch the script, the demo automatically wires up ElevenLabs TTS so you
+hear synthesized speech. When those variables are missing it falls back to a
+simple confirmation tone.
 
 ```bash
 python -m ChatAssistant.main
 ```
 
-Expected console output:
+Expected console output and audio:
 
 ```
 Combat: 450 km/h, Landing: 350 km/h, Takeoff: 320 km/h
@@ -74,8 +78,8 @@ interface with the system's default input and output devices. Install it via:
 pip install sounddevice
 ```
 
-Set the following environment variables before launching the assistant so that
-the ElevenLabs adapters can authenticate:
+Set the following environment variables in the same terminal session before
+launching the assistant so that the ElevenLabs adapters can authenticate:
 
 ```bash
 set ELEVENLABS_API_KEY=<your_api_key>
