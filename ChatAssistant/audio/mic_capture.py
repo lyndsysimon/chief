@@ -9,21 +9,13 @@ from array import array
 from contextlib import AbstractContextManager
 from typing import Callable, Optional
 
-try:  # pragma: no cover - environment specific module availability
-    import audioop  # type: ignore[import-not-found]
-except ModuleNotFoundError:  # pragma: no cover - executed when audioop missing
-    audioop = None  # type: ignore[assignment]
-
 from .types import AudioChunk
 
 LOGGER = logging.getLogger(__name__)
 
 
 def _compute_rms(chunk: bytes, sample_width: int) -> int:
-    """Return the RMS value for ``chunk`` using ``audioop`` when available."""
-
-    if audioop is not None:
-        return audioop.rms(chunk, sample_width)
+    """Return the RMS value for ``chunk`` using a pure Python implementation."""
 
     if sample_width == 1:
         samples = array("b", chunk)
