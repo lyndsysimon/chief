@@ -22,11 +22,11 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["ChatAssistant"]
+packages = ["chief"]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "ChatAssistant",
+    "chief",
     "tests",
     "README.md",
 ]

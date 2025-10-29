@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from ChatAssistant.brain.prompt_presets import PromptMode
-from ChatAssistant.core.state_manager import AssistantState
+from chief.brain.prompt_presets import PromptMode
+from chief.core.state_manager import AssistantState
 
 
 @pytest.fixture()

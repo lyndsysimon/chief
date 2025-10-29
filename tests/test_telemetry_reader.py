@@ -1,5 +1,5 @@
-from ChatAssistant.core.state_manager import AssistantState
-from ChatAssistant.core.telemetry_reader import TelemetryReader
+from chief.core.state_manager import AssistantState
+from chief.core.telemetry_reader import TelemetryReader
 
 
 class DummyState(AssistantState):

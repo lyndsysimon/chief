@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from ChatAssistant.brain.responder import TelemetryResponder
-from ChatAssistant.core.reference_data import ReferenceDataRegistry
-from ChatAssistant.core.state_manager import AssistantState
+from chief.brain.responder import TelemetryResponder
+from chief.core.reference_data import ReferenceDataRegistry
+from chief.core.state_manager import AssistantState
 
 
 def make_state(tmp_path: Path) -> AssistantState:

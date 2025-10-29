@@ -2,14 +2,14 @@ import logging
 
 import pytest
 
-from ChatAssistant.audio import stt as stt_module
-from ChatAssistant.audio import tts as tts_module
-from ChatAssistant.audio.hotkey_listener import GlobalHotkeyListener
-from ChatAssistant.audio.mic_capture import MicrophoneStream
-from ChatAssistant.audio.stt import call_stt, register_stt_backend
-from ChatAssistant.audio.tts import call_tts, play_audio, register_tts_backend
-from ChatAssistant.audio.wake_word_listener import WakeWordListener
-from ChatAssistant.audio.types import AudioChunk
+from chief.audio import stt as stt_module
+from chief.audio import tts as tts_module
+from chief.audio.hotkey_listener import GlobalHotkeyListener
+from chief.audio.mic_capture import MicrophoneStream
+from chief.audio.stt import call_stt, register_stt_backend
+from chief.audio.tts import call_tts, play_audio, register_tts_backend
+from chief.audio.wake_word_listener import WakeWordListener
+from chief.audio.types import AudioChunk
 
 
 @pytest.fixture(autouse=True)
