@@ -6,13 +6,11 @@ from ChatAssistant.audio.types import AudioChunk
 
 
 def test_example_flow_configures_elevenlabs(monkeypatch):
-    original_backend = main.TTS_BACKEND
     called_kwargs: dict[str, bool] = {}
 
     def fake_configure(*, configure_stt: bool, configure_tts: bool) -> None:
         called_kwargs["configure_stt"] = configure_stt
         called_kwargs["configure_tts"] = configure_tts
-        main.TTS_BACKEND = object()  # ensure example flow takes the call_tts branch
 
     monkeypatch.setattr(main, "configure_elevenlabs_from_env", fake_configure)
 
@@ -27,13 +25,15 @@ def test_example_flow_configures_elevenlabs(monkeypatch):
 
     monkeypatch.setattr(main, "call_tts", fake_call_tts)
 
+    def fail_synthesize(_: str) -> AudioChunk:
+        raise AssertionError("Synthesized tone should not be used when TTS returns audio")
+
+    monkeypatch.setattr(main, "_synthesize_reference_tone", fail_synthesize)
+
     played: dict[str, AudioChunk] = {}
     monkeypatch.setattr(main, "play_audio", lambda chunk: played.setdefault("chunk", chunk))
 
-    try:
-        main.example_flow()
-    finally:
-        main.TTS_BACKEND = original_backend
+    main.example_flow()
 
     assert called_kwargs == {"configure_stt": False, "configure_tts": True}
     assert recorded["text"] == reply
@@ -41,8 +41,6 @@ def test_example_flow_configures_elevenlabs(monkeypatch):
 
 
 def test_example_flow_falls_back_to_tone(monkeypatch):
-    original_backend = main.TTS_BACKEND
-
     def fake_configure(**_: bool) -> None:
         raise AudioConfigurationError("missing env")
 
@@ -50,6 +48,14 @@ def test_example_flow_falls_back_to_tone(monkeypatch):
 
     reply = "Combat: 450 km/h, Landing: 350 km/h, Takeoff: 320 km/h"
     monkeypatch.setattr(main, "call_llm", lambda messages: reply)
+
+    recorded: dict[str, AudioChunk] = {}
+
+    def fake_call_tts(text: str) -> AudioChunk:
+        recorded["text"] = text
+        return AudioChunk(data=b"", sample_rate=16_000)
+
+    monkeypatch.setattr(main, "call_tts", fake_call_tts)
 
     synthesized: dict[str, AudioChunk] = {}
 
@@ -60,14 +66,12 @@ def test_example_flow_falls_back_to_tone(monkeypatch):
         return chunk
 
     monkeypatch.setattr(main, "_synthesize_reference_tone", fake_synthesize)
-    monkeypatch.setattr(main, "play_audio", lambda chunk: synthesized.setdefault("played", chunk))
 
-    main.TTS_BACKEND = None
+    played: dict[str, AudioChunk] = {}
+    monkeypatch.setattr(main, "play_audio", lambda chunk: played.setdefault("chunk", chunk))
 
-    try:
-        main.example_flow()
-    finally:
-        main.TTS_BACKEND = original_backend
+    main.example_flow()
 
+    assert recorded["text"] == reply
     assert synthesized["text"] == reply
-    assert synthesized["played"].data == b"\x10\x20"
+    assert played["chunk"].data == b"\x10\x20"

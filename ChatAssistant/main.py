@@ -18,7 +18,7 @@ from .audio import AudioConfigurationError, configure_elevenlabs_from_env
 from .audio.hotkey_listener import GlobalHotkeyListener
 from .audio.mic_capture import MicrophoneStream
 from .audio.stt import call_stt
-from .audio.tts import TTS_BACKEND, call_tts, play_audio
+from .audio.tts import call_tts, play_audio
 from .audio.types import AudioChunk
 from .audio.wake_word_listener import WakeWordListener
 from .brain.intent_classifier import IntentType, classify_intent
@@ -157,7 +157,7 @@ def example_flow() -> None:
     llm_reply = call_llm(messages)
     print(llm_reply)
 
-    audio_chunk = call_tts(llm_reply) if TTS_BACKEND is not None else AudioChunk(data=b"", sample_rate=16_000)
+    audio_chunk = call_tts(llm_reply)
     if not audio_chunk.data:
         audio_chunk = _synthesize_reference_tone(llm_reply)
     play_audio(audio_chunk)
