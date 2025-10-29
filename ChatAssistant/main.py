@@ -113,6 +113,11 @@ def handle_interaction(state: AssistantState, responder: TelemetryResponder, def
 def example_flow() -> None:
     """Demonstrate an example interaction using stubbed values."""
 
+    try:
+        configure_elevenlabs_from_env(configure_stt=False, configure_tts=True)
+    except AudioConfigurationError as exc:
+        LOGGER.info("ElevenLabs TTS not configured for example flow: %s", exc)
+
     state = AssistantState()
     state.set_wake_word("chief")
     state.set_prompt_mode(PromptMode.CREW_CHIEF)
