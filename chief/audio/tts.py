@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 from typing import Callable, Optional
 
 try:  # pragma: no cover - optional dependency for packaging environments
@@ -20,9 +21,24 @@ except ModuleNotFoundError:  # pragma: no cover - fallback when requests is unav
     class Session:  # type: ignore[override]
         """Placeholder type used when requests is missing."""
 
+try:  # pragma: no cover - optional dependency for packaging environments
+    import sounddevice as sd
+except ModuleNotFoundError:  # pragma: no cover - fallback when sounddevice is unavailable
+    sd = None  # type: ignore[assignment]
+
 from .types import AudioChunk
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _get_sounddevice():
+    if sd is not None:
+        return sd
+    module = sys.modules.get("sounddevice")
+    if module is not None:
+        return module
+    return None
+
 
 TextToSpeechBackend = Callable[[str], AudioChunk]
 TTS_BACKEND: TextToSpeechBackend | None = None
@@ -52,15 +68,14 @@ def play_audio(audio: AudioChunk | bytes) -> None:
         LOGGER.info("[AUDIO] %s", "Combat: 450 km/h, Landing: 350 km/h, Takeoff: 320 km/h")
         return
 
-    try:
-        import sounddevice as sd
-    except ImportError:  # pragma: no cover - depends on optional dependency
+    backend = _get_sounddevice()
+    if backend is None:  # pragma: no cover - depends on optional dependency
         LOGGER.warning("sounddevice not installed; unable to play audio (%d bytes)", len(chunk.data))
         return
 
     dtype = _dtype_from_width(chunk.sample_width)
     try:
-        stream = sd.RawOutputStream(
+        stream = backend.RawOutputStream(
             samplerate=chunk.sample_rate,
             channels=chunk.channels,
             dtype=dtype,
