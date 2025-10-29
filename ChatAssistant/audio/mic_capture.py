@@ -1,16 +1,41 @@
 """Microphone capture implementation backed by ``sounddevice`` when available."""
 from __future__ import annotations
 
-import audioop
 import logging
+import math
 import queue
 import time
+from array import array
 from contextlib import AbstractContextManager
 from typing import Callable, Optional
 
 from .types import AudioChunk
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _compute_rms(chunk: bytes, sample_width: int) -> int:
+    """Return the RMS value for ``chunk`` using a pure Python implementation."""
+
+    if sample_width == 1:
+        samples = array("b", chunk)
+    elif sample_width == 2:
+        samples = array("h")
+        samples.frombytes(chunk)
+    elif sample_width == 4:
+        samples = array("i")
+        samples.frombytes(chunk)
+    else:  # pragma: no cover - defensive programming
+        raise ValueError(f"Unsupported sample width: {sample_width}")
+
+    if not samples:
+        return 0
+
+    total = 0
+    for sample in samples:
+        total += sample * sample
+
+    return int(math.sqrt(total / len(samples)))
 
 InputStreamFactory = Callable[[int, int, int, Callable[[bytes], None]], object]
 
@@ -129,7 +154,7 @@ class MicrophoneStream(AbstractContextManager):
                 continue
 
             frames.append(chunk)
-            rms = audioop.rms(chunk, self.sample_width)
+            rms = _compute_rms(chunk, self.sample_width)
             if rms < self.silence_threshold:
                 if silence_start is None:
                     silence_start = time.monotonic()
