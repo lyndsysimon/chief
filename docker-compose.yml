@@ -1,0 +1,12 @@
+services:
+  chief:
+    build:
+      context: .
+    image: chief:dev
+    working_dir: /app
+    command: sleep infinity
+    volumes:
+      - ./:/app
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
