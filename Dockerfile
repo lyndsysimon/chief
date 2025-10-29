@@ -11,7 +11,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./
-COPY ChatAssistant ./ChatAssistant
+COPY chief ./chief
 
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir .[dev]

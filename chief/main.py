@@ -48,7 +48,7 @@ def bootstrap_assistant() -> None:
     )
     telemetry_thread.start()
 
-    reference_registry = ReferenceDataRegistry(base_path="./ChatAssistant/data/reference")
+    reference_registry = ReferenceDataRegistry(base_path="./chief/data/reference")
 
     responder = TelemetryResponder(state=state, reference_data=reference_registry)
 
@@ -130,7 +130,7 @@ def example_flow() -> None:
         }
     )
 
-    reference_registry = ReferenceDataRegistry(base_path="./ChatAssistant/data/reference")
+    reference_registry = ReferenceDataRegistry(base_path="./chief/data/reference")
     responder = TelemetryResponder(state=state, reference_data=reference_registry)
 
     question = "chief, what's my flap rip speed?"

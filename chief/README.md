@@ -9,7 +9,7 @@ hardware-specific implementations.
 ## Folder layout
 
 ```
-ChatAssistant/
+chief/
   core/        # Telemetry polling, state manager, reference data lookup
   audio/       # Wake word, hotkey, microphone, STT, TTS abstractions
   brain/       # Intent classification, prompt definitions, LLM client, responders
@@ -27,7 +27,7 @@ text-to-speech backend has been configured it synthesizes a simple tone
 sequence so you still hear a confirmation from the demo.
 
 ```bash
-python -m ChatAssistant.main
+python -m chief.main
 ```
 
 Expected console output and audio:
@@ -64,7 +64,7 @@ feedback.
 ## Configuration persistence
 
 `AssistantState` persists settings such as wake word and hotkey to
-`ChatAssistant/config.json`. The settings window and tray app stubs demonstrate
+`chief/config.json`. The settings window and tray app stubs demonstrate
 how the state object can be reused across components.
 
 ## Audio configuration
@@ -84,7 +84,7 @@ set ELEVENLABS_API_KEY=<your_api_key>
 set ELEVENLABS_VOICE_ID=<voice_id_to_synthesize>
 ```
 
-`ChatAssistant.audio.configure_elevenlabs_from_env()` reads these variables and
+`chief.audio.configure_elevenlabs_from_env()` reads these variables and
 automatically wires the speech-to-text and text-to-speech backends.
 
 ## Example voice interaction

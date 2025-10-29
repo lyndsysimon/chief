@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from ChatAssistant.core.reference_data import ReferenceDataRegistry
+from chief.core.reference_data import ReferenceDataRegistry
 
 
 def test_returns_none_when_vehicle_missing(tmp_path: Path) -> None:

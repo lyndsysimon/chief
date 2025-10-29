@@ -1,4 +1,4 @@
-from ChatAssistant.brain.intent_classifier import (
+from chief.brain.intent_classifier import (
     IntentType,
     classify_intent,
 )

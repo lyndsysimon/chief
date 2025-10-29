@@ -4,9 +4,9 @@ import wave
 
 import pytest
 
-from ChatAssistant.audio.stt import call_stt, register_elevenlabs_stt
-from ChatAssistant.audio.tts import call_tts, play_audio, register_elevenlabs_tts
-from ChatAssistant.audio.types import AudioChunk
+from chief.audio.stt import call_stt, register_elevenlabs_stt
+from chief.audio.tts import call_tts, play_audio, register_elevenlabs_tts
+from chief.audio.types import AudioChunk
 
 
 class DummyResponse:
@@ -56,8 +56,8 @@ class DummySession:
 
 @pytest.fixture(autouse=True)
 def reset_backends():
-    from ChatAssistant.audio import stt as stt_module
-    from ChatAssistant.audio import tts as tts_module
+    from chief.audio import stt as stt_module
+    from chief.audio import tts as tts_module
 
     stt_module.STT_BACKEND = None
     tts_module.TTS_BACKEND = None

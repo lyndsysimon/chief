@@ -25,7 +25,7 @@ class AssistantState:
         "tts_backend": "windows_sapi",
     }
 
-    def __init__(self, config_path: str = "./ChatAssistant/config.json") -> None:
+    def __init__(self, config_path: str = "./chief/config.json") -> None:
         self._lock = threading.RLock()
         self._config_path = Path(config_path)
         self._config = self._load_config()

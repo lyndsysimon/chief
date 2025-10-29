@@ -1,5 +1,5 @@
-from ChatAssistant.audio.mic_capture import MicrophoneStream
-from ChatAssistant.audio.types import AudioChunk
+from chief.audio.mic_capture import MicrophoneStream
+from chief.audio.types import AudioChunk
 
 
 class DummyStream:

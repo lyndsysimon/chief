@@ -1,4 +1,4 @@
-from ChatAssistant.brain.prompt_presets import (
+from chief.brain.prompt_presets import (
     CREW_CHIEF_PROMPT,
     INSTRUCTOR_PROMPT,
     PromptMode,
