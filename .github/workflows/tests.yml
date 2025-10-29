@@ -1,12 +1,16 @@
 name: Python tests
 
 on:
-  push:
-    branches: ["**"]
   pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
 
 jobs:
   test:
+    if: github.event.action != 'closed' || (github.event.pull_request.merged == true && github.event.pull_request.merge_commit_sha != github.event.pull_request.head.sha)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
