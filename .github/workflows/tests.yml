@@ -19,10 +19,12 @@ jobs:
       - name: Run tests with coverage in Docker
         run: |
           set -euo pipefail
-          docker run --name chief-ci-tests chief-ci pytest --cov=ChatAssistant --cov-report=xml
-          docker cp chief-ci-tests:/app/coverage.xml coverage.xml
-          docker rm chief-ci-tests
+          docker run --rm \
+            -v "$PWD":/coverage \
+            chief-ci \
+            pytest --cov=ChatAssistant --cov-report=xml:/coverage/coverage.xml
       - name: Upload coverage to Codecov
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
