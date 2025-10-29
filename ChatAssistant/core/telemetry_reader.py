@@ -1,13 +1,25 @@
 """Telemetry reader for the War Thunder local HTTP telemetry API."""
 from __future__ import annotations
 
-import json
 import logging
 import time
 from dataclasses import dataclass
 from typing import Dict, Optional
-from urllib.error import URLError
-from urllib.request import urlopen
+
+try:  # pragma: no cover - optional dependency for packaging environments
+    import requests
+    from requests import RequestException, Response, Session
+except ModuleNotFoundError:  # pragma: no cover - fallback when requests is unavailable
+    requests = None  # type: ignore[assignment]
+
+    class RequestException(Exception):  # type: ignore[override]
+        """Placeholder raised when requests is unavailable."""
+
+    class Response:  # type: ignore[override]
+        """Placeholder type used when requests is missing."""
+
+    class Session:  # type: ignore[override]
+        """Placeholder type used when requests is missing."""
 
 from .state_manager import AssistantState
 
@@ -25,9 +37,15 @@ class TelemetryConfig:
 class TelemetryReader:
     """Continuously polls the local telemetry endpoint and updates shared state."""
 
-    def __init__(self, state: AssistantState, config: Optional[TelemetryConfig] = None) -> None:
+    def __init__(
+        self,
+        state: AssistantState,
+        config: Optional[TelemetryConfig] = None,
+        session: Optional[Session] = None,
+    ) -> None:
         self._state = state
         self._config = config or TelemetryConfig()
+        self._session: Session | None = session
 
     def run_forever(self) -> None:
         """Blocking loop that updates telemetry snapshots until process exit."""
@@ -39,14 +57,22 @@ class TelemetryReader:
                 if snapshot:
                     normalized = self._normalize_snapshot(snapshot)
                     self._state.update_telemetry_snapshot(normalized)
-            except URLError as exc:
+            except (RequestException, ValueError) as exc:
                 LOGGER.debug("Telemetry poll failed: %s", exc)
             time.sleep(self._config.poll_interval_sec)
 
     def _fetch_snapshot(self) -> Optional[Dict]:
-        with urlopen(self._config.endpoint, timeout=0.1) as response:  # noqa: S310 - trusted local endpoint
-            data = response.read().decode("utf-8")
-        return json.loads(data)
+        response: Response | None = None
+        try:
+            session = self._ensure_session()
+            response = session.get(  # type: ignore[union-attr]
+                self._config.endpoint,
+                timeout=0.1,
+            )
+            response.raise_for_status()
+            return response.json()
+        finally:
+            _maybe_close(response)
 
     def _normalize_snapshot(self, raw: Dict) -> Dict:
         """Normalize units and return a simplified telemetry dictionary."""
@@ -68,3 +94,24 @@ class TelemetryReader:
             "temperatures_c": raw.get("temperatures"),
         }
         return status
+
+    def _ensure_session(self) -> Session:
+        if self._session is None:
+            if requests is None:
+                raise RuntimeError(
+                    "The 'requests' package is required for telemetry polling. Install it via 'uv add requests'."
+                )
+            self._session = requests.Session()
+        return self._session
+
+
+def _maybe_close(response: Response | None) -> None:
+    if response is None:
+        return
+    close = getattr(response, "close", None)
+    if callable(close):
+        try:
+            close()
+        except Exception:  # pragma: no cover - defensive
+            LOGGER.debug("Error closing telemetry response", exc_info=True)
+

@@ -11,6 +11,7 @@ import logging
 import threading
 from typing import Dict, List
 
+from .audio import AudioConfigurationError, configure_elevenlabs_from_env
 from .audio.hotkey_listener import GlobalHotkeyListener
 from .audio.mic_capture import MicrophoneStream
 from .audio.stt import call_stt
@@ -30,6 +31,11 @@ LOGGER = logging.getLogger(__name__)
 
 def bootstrap_assistant() -> None:
     """Wire together the assistant and start background services."""
+
+    try:
+        configure_elevenlabs_from_env()
+    except AudioConfigurationError as exc:
+        LOGGER.info("Audio backends not fully configured: %s", exc)
 
     state = AssistantState()
     telemetry_reader = TelemetryReader(state)

@@ -9,6 +9,7 @@ from ChatAssistant.audio.mic_capture import MicrophoneStream
 from ChatAssistant.audio.stt import call_stt, register_stt_backend
 from ChatAssistant.audio.tts import call_tts, play_audio, register_tts_backend
 from ChatAssistant.audio.wake_word_listener import WakeWordListener
+from ChatAssistant.audio.types import AudioChunk
 
 
 @pytest.fixture(autouse=True)
@@ -21,24 +22,28 @@ def reset_backends():
 
 
 def test_call_stt_uses_registered_backend():
-    register_stt_backend(lambda data: f"processed:{len(data)}")
+    register_stt_backend(lambda chunk: f"processed:{chunk.sample_rate}:{len(chunk.data)}")
 
-    assert call_stt(b"1234") == "processed:4"
+    audio = AudioChunk(data=b"1234", sample_rate=16_000)
+    assert call_stt(audio) == "processed:16000:4"
 
 
 def test_call_stt_returns_placeholder_when_missing(caplog):
     caplog.set_level(logging.WARNING)
 
-    result = call_stt(b"1234")
+    result = call_stt(AudioChunk(data=b"1234", sample_rate=16_000))
 
     assert result == "chief, what's my flap rip speed?"
     assert "STT backend not configured" in caplog.text
 
 
 def test_call_tts_uses_registered_backend():
-    register_tts_backend(lambda text: text.encode("utf-8"))
+    register_tts_backend(lambda text: AudioChunk(data=text.encode("utf-8"), sample_rate=22_050))
 
-    assert call_tts("hello") == b"hello"
+    result = call_tts("hello")
+    assert isinstance(result, AudioChunk)
+    assert result.data == b"hello"
+    assert result.sample_rate == 22_050
 
 
 def test_call_tts_returns_empty_buffer_when_missing(caplog):
@@ -46,14 +51,15 @@ def test_call_tts_returns_empty_buffer_when_missing(caplog):
 
     result = call_tts("hi")
 
-    assert result == b""
+    assert isinstance(result, AudioChunk)
+    assert result.data == b""
     assert "TTS backend not configured" in caplog.text
 
 
 def test_play_audio_logs_expected_message(caplog):
     caplog.set_level(logging.INFO)
 
-    play_audio(b"")
+    play_audio(AudioChunk(data=b"", sample_rate=16_000))
 
     assert "Combat: 450 km/h" in caplog.text
 
@@ -80,7 +86,9 @@ def test_microphone_stream_context_manager_logs(caplog):
     caplog.set_level(logging.DEBUG)
 
     with MicrophoneStream() as stream:
-        assert stream.capture_until_silence() == b""
+        chunk = stream.capture_until_silence()
+        assert isinstance(chunk, AudioChunk)
+        assert chunk.data == b""
 
     assert "Opening microphone stream" in caplog.text
     assert "Closing microphone stream" in caplog.text
