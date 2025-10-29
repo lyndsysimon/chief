@@ -123,6 +123,12 @@ class ElevenLabsTextToSpeechClient:
             "Accept": "audio/wav",
         }
         response: Response | None = None
+        LOGGER.debug(
+            "Sending ElevenLabs TTS request (voice_id=%s, model_id=%s, text_length=%d)",
+            self.voice_id,
+            self.model_id,
+            len(text),
+        )
         try:
             response = self._session.post(  # type: ignore[union-attr]
                 f"https://api.elevenlabs.io/v1/text-to-speech/{self.voice_id}",
@@ -130,14 +136,32 @@ class ElevenLabsTextToSpeechClient:
                 json=payload,
                 timeout=self.timeout,
             )
+            LOGGER.debug(
+                "ElevenLabs TTS response received (status=%s, reason=%s, content_type=%s, bytes=%d)",
+                getattr(response, "status_code", None),
+                getattr(response, "reason", None),
+                response.headers.get("Content-Type") if hasattr(response, "headers") else None,
+                len(getattr(response, "content", b"")),
+            )
             response.raise_for_status()
             audio_bytes = response.content
+            if not audio_bytes:
+                LOGGER.warning("ElevenLabs TTS returned an empty audio payload")
         except HTTPError as exc:  # pragma: no cover - exercised via tests
+            _log_elevenlabs_error(exc)
             raise RuntimeError("ElevenLabs TTS request failed") from exc
         finally:
             _maybe_close(response)
 
-        return AudioChunk.from_wav_bytes(audio_bytes)
+        chunk = AudioChunk.from_wav_bytes(audio_bytes)
+        LOGGER.debug(
+            "ElevenLabs TTS audio decoded (channels=%s, sample_rate=%s, sample_width=%s, bytes=%d)",
+            chunk.channels,
+            chunk.sample_rate,
+            chunk.sample_width,
+            len(chunk.data),
+        )
+        return chunk
 
 
 def register_elevenlabs_tts(
@@ -166,6 +190,12 @@ def register_elevenlabs_tts(
         session=session,
     )
     register_tts_backend(client.synthesize)
+    LOGGER.info(
+        "Registered ElevenLabs TTS backend (voice_id=%s, model_id=%s, timeout=%s)",
+        voice_id,
+        model_id,
+        timeout,
+    )
     return client
 
 
@@ -186,3 +216,38 @@ def _create_session() -> Session:
             "The 'requests' package is required for ElevenLabs TTS integration. Install it via 'uv add requests'."
         )
     return requests.Session()
+
+
+def _log_elevenlabs_error(exc: HTTPError) -> None:
+    response = getattr(exc, "response", None)
+    if response is None:
+        LOGGER.error("ElevenLabs TTS request failed without a response: %s", exc)
+        return
+
+    status = getattr(response, "status_code", "<unknown>")
+    reason = getattr(response, "reason", "")
+    content_type = None
+    try:
+        content_type = response.headers.get("Content-Type")
+    except Exception:  # pragma: no cover - defensive
+        content_type = None
+
+    preview: str | bytes
+    try:
+        preview = response.text  # type: ignore[assignment]
+    except Exception:  # pragma: no cover - defensive
+        preview = getattr(response, "content", b"")
+
+    if isinstance(preview, str):
+        preview = preview.strip()
+        preview = preview[:500]
+    else:
+        preview = preview[:200]
+
+    LOGGER.error(
+        "ElevenLabs TTS request failed (status=%s, reason=%s, content_type=%s, body_preview=%r)",
+        status,
+        reason,
+        content_type,
+        preview,
+    )
