@@ -1,0 +1,12 @@
+{
+  "vehicle": "F-16C Block 50",
+  "flap_speed_limits_kmh_ias": {
+    "combat": 450,
+    "landing": 350,
+    "takeoff": 320
+  },
+  "gear_limit_speed_kmh_ias": 400,
+  "structural_limits": {
+    "wing_rip_g": 10.5
+  }
+}
