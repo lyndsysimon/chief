@@ -43,10 +43,13 @@ feedback.
   Silero, or integrate Windows Speech SDK. Hook detection to `self._on_trigger()`.
 * **Global hotkey** – Replace `GlobalHotkeyListener` with `keyboard` or
   `pywin32` registration. Call `self._on_trigger()` on activation.
-* **STT** – Register an implementation with `register_stt_backend()` inside
-  `audio/stt.py`. Faster Whisper or ElevenLabs works well on Windows.
-* **TTS** – Register an implementation with `register_tts_backend()` inside
-  `audio/tts.py`. Windows SAPI voices or ElevenLabs are both supported.
+* **STT** – `register_stt_backend()` in `audio/stt.py` now defaults to an
+  ElevenLabs client when `ELEVENLABS_API_KEY` is provided. The helper converts
+  PCM input to a WAV payload before calling the
+  `https://api.elevenlabs.io/v1/speech-to-text` endpoint.
+* **TTS** – `register_tts_backend()` in `audio/tts.py` uses ElevenLabs when
+  both `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` are set. Responses are
+  downloaded as WAV and streamed to the default playback device.
 * **LLM** – Implement `call_llm()` to call your preferred OpenAI-compatible
   endpoint. Remember to include the persona prompt provided in the
   requirements.
@@ -61,6 +64,26 @@ feedback.
 `AssistantState` persists settings such as wake word and hotkey to
 `ChatAssistant/config.json`. The settings window and tray app stubs demonstrate
 how the state object can be reused across components.
+
+## Audio configuration
+
+`MicrophoneStream` and `play_audio` use the optional `sounddevice` package to
+interface with the system's default input and output devices. Install it via:
+
+```bash
+pip install sounddevice
+```
+
+Set the following environment variables before launching the assistant so that
+the ElevenLabs adapters can authenticate:
+
+```bash
+set ELEVENLABS_API_KEY=<your_api_key>
+set ELEVENLABS_VOICE_ID=<voice_id_to_synthesize>
+```
+
+`ChatAssistant.audio.configure_elevenlabs_from_env()` reads these variables and
+automatically wires the speech-to-text and text-to-speech backends.
 
 ## Example voice interaction
 
