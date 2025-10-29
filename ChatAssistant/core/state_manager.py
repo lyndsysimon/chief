@@ -36,7 +36,7 @@ class AssistantState:
     # ------------------------------------------------------------------
     def update_telemetry_snapshot(self, snapshot: Dict[str, Any]) -> None:
         with self._lock:
-            self._telemetry_snapshot = snapshot
+            self._telemetry_snapshot = dict(snapshot)
 
     def get_telemetry_snapshot(self) -> Dict[str, Any]:
         with self._lock:

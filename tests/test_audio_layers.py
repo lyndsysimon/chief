@@ -1,0 +1,86 @@
+import logging
+
+import pytest
+
+from ChatAssistant.audio import stt as stt_module
+from ChatAssistant.audio import tts as tts_module
+from ChatAssistant.audio.hotkey_listener import GlobalHotkeyListener
+from ChatAssistant.audio.mic_capture import MicrophoneStream
+from ChatAssistant.audio.stt import call_stt, register_stt_backend
+from ChatAssistant.audio.tts import call_tts, play_audio, register_tts_backend
+from ChatAssistant.audio.wake_word_listener import WakeWordListener
+
+
+@pytest.fixture(autouse=True)
+def reset_backends():
+    stt_module.STT_BACKEND = None
+    tts_module.TTS_BACKEND = None
+    yield
+    stt_module.STT_BACKEND = None
+    tts_module.TTS_BACKEND = None
+
+
+def test_call_stt_uses_registered_backend():
+    register_stt_backend(lambda data: f"processed:{len(data)}")
+
+    assert call_stt(b"1234") == "processed:4"
+
+
+def test_call_stt_returns_placeholder_when_missing(caplog):
+    caplog.set_level(logging.WARNING)
+
+    result = call_stt(b"1234")
+
+    assert result == "chief, what's my flap rip speed?"
+    assert "STT backend not configured" in caplog.text
+
+
+def test_call_tts_uses_registered_backend():
+    register_tts_backend(lambda text: text.encode("utf-8"))
+
+    assert call_tts("hello") == b"hello"
+
+
+def test_call_tts_returns_empty_buffer_when_missing(caplog):
+    caplog.set_level(logging.WARNING)
+
+    result = call_tts("hi")
+
+    assert result == b""
+    assert "TTS backend not configured" in caplog.text
+
+
+def test_play_audio_logs_expected_message(caplog):
+    caplog.set_level(logging.INFO)
+
+    play_audio(b"")
+
+    assert "Combat: 450 km/h" in caplog.text
+
+
+def test_hotkey_listener_simulate_trigger_invokes_callback():
+    triggered = []
+    listener = GlobalHotkeyListener(lambda: "ctrl+shift+x", lambda: triggered.append(True))
+
+    listener.simulate_trigger()
+
+    assert triggered == [True]
+
+
+def test_wake_word_listener_simulate_detection_invokes_callback():
+    triggered = []
+    listener = WakeWordListener(lambda: "chief", lambda: triggered.append(True))
+
+    listener.simulate_detection()
+
+    assert triggered == [True]
+
+
+def test_microphone_stream_context_manager_logs(caplog):
+    caplog.set_level(logging.DEBUG)
+
+    with MicrophoneStream() as stream:
+        assert stream.capture_until_silence() == b""
+
+    assert "Opening microphone stream" in caplog.text
+    assert "Closing microphone stream" in caplog.text
