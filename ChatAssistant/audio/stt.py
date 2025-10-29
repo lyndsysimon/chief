@@ -1,24 +1,12 @@
-"""Speech-to-text abstraction layer with optional ElevenLabs integration."""
+"""Speech-to-text abstraction layer with ElevenLabs integration."""
 from __future__ import annotations
 
 import logging
 import os
 from typing import Callable, Optional
 
-try:  # pragma: no cover - optional dependency for packaging environments
-    import requests
-    from requests import HTTPError, Response, Session
-except ModuleNotFoundError:  # pragma: no cover - fallback when requests is unavailable
-    requests = None  # type: ignore[assignment]
-
-    class HTTPError(Exception):  # type: ignore[override]
-        """Placeholder raised when requests is unavailable."""
-
-    class Response:  # type: ignore[override]
-        """Placeholder type used to satisfy type checkers when requests is missing."""
-
-    class Session:  # type: ignore[override]
-        """Placeholder type used to satisfy type checkers when requests is missing."""
+import requests
+from requests import HTTPError, Response, Session
 
 from .types import AudioChunk
 
@@ -139,8 +127,4 @@ def _maybe_close(response: Response | None) -> None:
 
 
 def _create_session() -> Session:
-    if requests is None:
-        raise RuntimeError(
-            "The 'requests' package is required for ElevenLabs STT integration. Install it via 'uv add requests'."
-        )
     return requests.Session()

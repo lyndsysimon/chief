@@ -69,7 +69,7 @@ how the state object can be reused across components.
 
 ## Audio configuration
 
-`MicrophoneStream` and `play_audio` use the optional `sounddevice` package to
+`MicrophoneStream` and `play_audio` rely on the `sounddevice` package to
 interface with the system's default input and output devices. Install it via:
 
 ```bash

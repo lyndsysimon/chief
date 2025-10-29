@@ -1,4 +1,4 @@
-"""Microphone capture implementation backed by ``sounddevice`` when available."""
+"""Microphone capture implementation backed by ``sounddevice``."""
 from __future__ import annotations
 
 import logging
@@ -104,11 +104,7 @@ class MicrophoneStream(AbstractContextManager):
     def _build_sounddevice_stream(
         self, sample_rate: int, channels: int, blocksize: int, callback: Callable[[bytes], None]
     ) -> object:
-        try:
-            import sounddevice as sd
-        except ImportError:  # pragma: no cover - executed when dependency missing
-            LOGGER.info("sounddevice not installed; microphone capture disabled")
-            raise
+        import sounddevice as sd
 
         def _callback(indata, frames, time_info, status):  # noqa: ARG001
             if status:  # pragma: no cover - status logging
