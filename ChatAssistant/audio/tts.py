@@ -48,6 +48,7 @@ def play_audio(audio: AudioChunk | bytes) -> None:
     """Playback helper that sends PCM data to the default audio device."""
 
     chunk = _coerce_chunk(audio)
+    LOGGER.warning(repr(chunk))
     if not chunk.data:
         LOGGER.warning("Audio chunk empty; playing placeholder tone instead of ElevenLabs output")
         return
