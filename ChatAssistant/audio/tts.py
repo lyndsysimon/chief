@@ -49,7 +49,7 @@ def play_audio(audio: AudioChunk | bytes) -> None:
 
     chunk = _coerce_chunk(audio)
     if not chunk.data:
-        LOGGER.info("[AUDIO] %s", "Combat: 450 km/h, Landing: 350 km/h, Takeoff: 320 km/h")
+        LOGGER.warning("Audio chunk empty; playing placeholder tone instead of ElevenLabs output")
         return
 
     try:
@@ -123,7 +123,7 @@ class ElevenLabsTextToSpeechClient:
             "Accept": "audio/wav",
         }
         response: Response | None = None
-        LOGGER.debug(
+        LOGGER.info(
             "Sending ElevenLabs TTS request (voice_id=%s, model_id=%s, text_length=%d)",
             self.voice_id,
             self.model_id,
@@ -136,7 +136,7 @@ class ElevenLabsTextToSpeechClient:
                 json=payload,
                 timeout=self.timeout,
             )
-            LOGGER.debug(
+            LOGGER.info(
                 "ElevenLabs TTS response received (status=%s, reason=%s, content_type=%s, bytes=%d)",
                 getattr(response, "status_code", None),
                 getattr(response, "reason", None),
@@ -154,7 +154,7 @@ class ElevenLabsTextToSpeechClient:
             _maybe_close(response)
 
         chunk = AudioChunk.from_wav_bytes(audio_bytes)
-        LOGGER.debug(
+        LOGGER.info(
             "ElevenLabs TTS audio decoded (channels=%s, sample_rate=%s, sample_width=%s, bytes=%d)",
             chunk.channels,
             chunk.sample_rate,
