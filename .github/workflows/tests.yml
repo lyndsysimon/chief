@@ -24,7 +24,7 @@ jobs:
           docker run --rm \
             -v "$PWD":/coverage \
             chief-ci \
-            pytest --cov=ChatAssistant --cov-report=xml:/coverage/coverage.xml
+            pytest --cov=chief --cov-report=xml:/coverage/coverage.xml
       - name: Upload coverage to Codecov
         if: ${{ env.CODECOV_TOKEN != '' }}
         uses: codecov/codecov-action@v5
